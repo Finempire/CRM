@@ -59,7 +59,7 @@ export function Topbar({ user }: TopbarProps) {
       {/* Left: Breadcrumb / title */}
       <div className="flex items-center gap-2 min-w-0">
         <h1 className="text-sm font-medium text-muted-foreground hidden sm:block">
-          {process.env.NEXT_PUBLIC_COMPANY_NAME ?? "GarmentOS"}
+          {process.env.NEXT_PUBLIC_COMPANY_NAME ?? "Manufacture Lab"}
         </h1>
       </div>
 
