@@ -1,137 +1,41 @@
-name: Deploy to Linode
+name: CI
 
 on:
   push:
     branches:
       - main
-
-concurrency:
-  group: production-deploy
-  cancel-in-progress: false   # never cancel an in-flight deploy
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
-    name: Build, Lint, Typecheck & Deploy
+  ci:
+    name: Lint, Typecheck & Build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── 2. Node.js setup with npm cache ──────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      # ── 3. Validate required secrets before doing any real work ──────────────
-      # Catches missing/malformed secrets early so errors are obvious.
-      - name: Validate deployment secrets
-        run: |
-          MISSING=""
-          [ -z "$LINODE_HOST_IP" ]        && MISSING="$MISSING LINODE_HOST_IP"
-          [ -z "$LINODE_SSH_USER" ]        && MISSING="$MISSING LINODE_SSH_USER"
-          [ -z "$LINODE_SSH_PRIVATE_KEY" ] && MISSING="$MISSING LINODE_SSH_PRIVATE_KEY"
-          if [ -n "$MISSING" ]; then
-            echo "::error::Missing required GitHub Secrets:$MISSING"
-            echo "Go to: Repository → Settings → Secrets and variables → Actions"
-            exit 1
-          fi
-          # Reject obviously wrong host values (must look like an IP or hostname)
-          if echo "$LINODE_HOST_IP" | grep -qP '^[_\s]|^$'; then
-            echo "::error::LINODE_HOST_IP looks invalid: '$LINODE_HOST_IP'"
-            echo "It must be a public IPv4 address (e.g. 172.105.x.x), not a Linode server ID."
-            exit 1
-          fi
-          echo "Secrets validated. Deploying to $LINODE_HOST_IP as $LINODE_SSH_USER"
-        env:
-          LINODE_HOST_IP:        ${{ secrets.LINODE_HOST_IP }}
-          LINODE_SSH_USER:       ${{ secrets.LINODE_SSH_USER }}
-          LINODE_SSH_PRIVATE_KEY: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
-
-      # ── 4. Install ───────────────────────────────────────────────────────────
       - name: Install dependencies
         run: npm ci
 
-      # ── 5. Quality gates ─────────────────────────────────────────────────────
       - name: Lint
         run: npm run lint
 
       - name: Type check
         run: npx tsc --noEmit
 
-      # ── 6. Build ─────────────────────────────────────────────────────────────
-      - name: Build Next.js
+      - name: Build
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NEXT_PUBLIC_APP_NAME: "ThreadFlow OS"
           PRISMA_GENERATE_SKIP_AUTOINSTALL: "true"
-
-      # ── 7. Write SSH key & add server to known_hosts ─────────────────────────
-      # We handle SSH ourselves instead of using easingthemes/ssh-deploy, which
-      # has a bug where it uses the masked secret value as the key filename.
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          # Write private key (handles both RSA and Ed25519 PEM formats)
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          # Add the server's host key to known_hosts (avoids interactive prompt)
-          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          chmod 644 ~/.ssh/known_hosts
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.LINODE_SSH_PRIVATE_KEY }}
-          REMOTE_HOST:     ${{ secrets.LINODE_HOST_IP }}
-
-      # ── 8. Sync built artefacts to Linode via rsync ──────────────────────────
-      - name: Deploy to Linode via rsync
-        run: |
-          rsync -rlgoDzvc --delete \
-            --exclude='/node_modules/' \
-            --exclude='/.git/' \
-            --exclude='/.env*' \
-            --exclude='/.next/cache/' \
-            --exclude='/public/uploads/' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p 22" \
-            ./ \
-            "$REMOTE_USER@$REMOTE_HOST:/var/www/threadflow"
-        env:
-          REMOTE_HOST: ${{ secrets.LINODE_HOST_IP }}
-          REMOTE_USER: ${{ secrets.LINODE_SSH_USER }}
-
-      # ── 9. Remote: install prod deps, migrate DB, restart app ────────────────
-      - name: Run post-deploy steps on Linode
-        run: |
-          ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=accept-new \
-              -p 22 \
-              "$REMOTE_USER@$REMOTE_HOST" \
-              'bash -s' << 'ENDSSH'
-            set -e
-            cd /var/www/threadflow
-
-            # Install production-only dependencies
-            npm ci --omit=dev
-
-            # Generate Prisma client matching installed engine
-            npx prisma generate
-
-            # Apply any pending migrations (safe in CI — uses deploy mode)
-            npx prisma migrate deploy
-
-            # Reload app via PM2 (zero-downtime reload)
-            pm2 reload threadflow-os --update-env || pm2 start ecosystem.config.js --env production
-
-            # Persist PM2 process list across reboots
-            pm2 save
-          ENDSSH
-        env:
-          REMOTE_HOST: ${{ secrets.LINODE_HOST_IP }}
-          REMOTE_USER: ${{ secrets.LINODE_SSH_USER }}
