@@ -11,7 +11,7 @@ import {
   Layers, Scissors, ListChecks, ShoppingCart, Warehouse,
   Factory, Truck, Receipt, CreditCard, FolderOpen,
   Bell, BarChart3, Users, Settings, ChevronRight,
-  ChevronLeft, LogOut, Building2, Search, Inbox
+  ChevronLeft, LogOut, Building2, Search, Inbox, Wrench
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -37,6 +37,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Material Requests", href: "/material-requests", icon: FileText },
   { label: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
   { label: "Inventory", href: "/inventory", icon: Warehouse },
+  { label: "Vendors", href: "/vendors", icon: Building2, roles: ["SUPER_ADMIN", "ACCOUNTANT_ADMIN", "STORE_MANAGER", "PROCUREMENT_USER", "ADMIN_OPERATIONS", "MERCHANDISER", "PRODUCTION_MANAGER"] as UserRole[] },
+  { label: "Job Work", href: "/job-work", icon: Wrench, roles: ["SUPER_ADMIN", "ACCOUNTANT_ADMIN", "MERCHANDISER", "PRODUCTION_MANAGER", "STORE_MANAGER", "PROCUREMENT_USER", "ADMIN_OPERATIONS"] as UserRole[] },
   { label: "Production", href: "/production", icon: Factory },
   { label: "Shipments", href: "/shipments", icon: Truck },
   { label: "Invoices", href: "/invoices", icon: Receipt, roles: ["SUPER_ADMIN", "ACCOUNTANT_ADMIN", "ACCOUNTANT", "CEO"] as UserRole[] },
