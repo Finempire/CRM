@@ -61,6 +61,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/multer": "^1.4.12",
     "@types/node": "^22",
@@ -70,6 +71,8 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.27",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.1",
     "postcss": "^8.5.8",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.19",
