@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "GarmentOS — Garment Manufacturing CRM",
-    template: "%s | GarmentOS",
+    default: "Manufacture Lab — Garment Manufacturing CRM",
+    template: "%s | Manufacture Lab",
   },
   description:
     "Production-ready garment manufacturing CRM + PLM + Operations platform. Manage orders, costing, production, and delivery in one unified system.",

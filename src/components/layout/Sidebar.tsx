@@ -89,7 +89,7 @@ export function Sidebar({ user }: SidebarProps) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
               <Building2 className="w-4.5 h-4.5 text-white" size={18} />
             </div>
-            <span className="font-bold text-sidebar-foreground text-sm tracking-tight">GarmentOS</span>
+            <span className="font-bold text-sidebar-foreground text-sm tracking-tight">Manufacture Lab</span>
           </Link>
         )}
         {collapsed && (
