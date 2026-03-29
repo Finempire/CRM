@@ -1,0 +1,1337 @@
+// GarmentOS — Full Prisma Schema
+// 28 tables covering the complete garment manufacturing CRM + PLM + Ops platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ACCOUNTANT_ADMIN
+  ACCOUNTANT
+  ADMIN_OPERATIONS
+  MERCHANDISER
+  PRODUCTION_MANAGER
+  STORE_MANAGER
+  PROCUREMENT_USER
+  LOGISTICS_USER
+  CLIENT
+  CEO
+}
+
+enum OrderType {
+  SAMPLE
+  PRODUCTION
+}
+
+enum OrderStatus {
+  INQUIRY
+  REVIEW
+  COSTING
+  MERCHANDISING
+  PRE_PRODUCTION
+  PROCUREMENT
+  PRODUCTION
+  LOGISTICS
+  DELIVERY
+  INVOICED
+  PAID
+  CLOSED
+  CANCELLED
+}
+
+enum InquiryStatus {
+  NEW
+  REVIEWING
+  CONVERTED
+  REJECTED
+  DUPLICATE
+}
+
+enum TnaStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  NA
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum MaterialStatus {
+  PENDING
+  ORDERED
+  PARTIAL_RECEIVED
+  FULLY_RECEIVED
+  READY
+  SHORTAGE
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  ACKNOWLEDGED
+  PARTIAL_RECEIVED
+  FULLY_RECEIVED
+  CANCELLED
+}
+
+enum ProductionStage {
+  CUTTING
+  STITCHING
+  FINISHING
+  PACKING
+  COMPLETE
+}
+
+enum ShipmentStatus {
+  DRAFT
+  READY_TO_SHIP
+  SHIPPED
+  IN_TRANSIT
+  DELAYED
+  DELIVERED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  WRITTEN_OFF
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum DocumentCategory {
+  CLIENT_REQUEST
+  COMMERCIAL
+  TECH_PACK
+  PATTERN
+  BOM_MATERIAL_PLAN
+  PURCHASE_ORDERS
+  INWARD_GRN
+  PRODUCTION_FILES
+  SHIPPING_DOCS
+  INVOICE_PAYMENT
+  QA_INSPECTION
+  FINAL_DELIVERY
+  OTHER
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  INQUIRY_RECEIVED
+  ORDER_CREATED
+  COSTING_REQUIRED
+  APPROVAL_REQUIRED
+  TECH_PACK_UPLOADED
+  BOM_SUBMITTED
+  PRE_PRODUCTION_APPROVED
+  MATERIAL_READY
+  PRODUCTION_STARTED
+  PRODUCTION_DELAYED
+  SHIPMENT_DISPATCHED
+  DELIVERY_CONFIRMED
+  INVOICE_GENERATED
+  PAYMENT_RECEIVED
+  PAYMENT_OVERDUE
+  TNA_OVERDUE
+  GENERAL
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+  APPROVED
+  REJECTED
+  UPLOADED
+  DOWNLOADED
+  CONVERTED
+  REOPENED
+  STAGE_CHANGED
+  STATUS_CHANGED
+  COMMENT_ADDED
+  ASSIGNED
+}
+
+enum StockTransactionType {
+  INWARD
+  ISSUE
+  RETURN
+  ADJUSTMENT
+  TRANSFER
+  WASTAGE
+}
+
+// ─── USERS & AUTH ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(MERCHANDISER)
+  isActive      Boolean   @default(true)
+  isTwoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  phone         String?
+  department    String?
+  designation   String?
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  accounts              Account[]
+  sessions              Session[]
+  assignedOrders        Order[]         @relation("MerchandiserOrders")
+  productionOrders      Order[]         @relation("ProductionManagerOrders")
+  createdInquiries      Inquiry[]       @relation("InquiryCreatedBy")
+  createdOrders         Order[]         @relation("OrderCreatedBy")
+  comments              Comment[]
+  approvals             Approval[]
+  notifications         Notification[]
+  activityLogs          ActivityLog[]
+  uploadedDocuments     Document[]
+  createdPurchaseOrders PurchaseOrder[]
+  productionUpdates     ProductionUpdate[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── BUYERS / CLIENTS ─────────────────────────────────────────────────────────
+
+model Buyer {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  shortName       String?
+  country         String?
+  currency        String    @default("INR")
+  email           String?
+  phone           String?
+  billingAddress  String?
+  shippingAddress String?
+  taxNumber       String?
+  paymentTerms    String?
+  creditLimit     Decimal?  @db.Decimal(15, 2)
+  notes           String?
+  isActive        Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  contacts        BuyerContact[]
+  inquiries       Inquiry[]
+  orders          Order[]
+
+  @@map("buyers")
+}
+
+model BuyerContact {
+  id        String  @id @default(cuid())
+  buyerId   String
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  isPrimary Boolean @default(false)
+
+  buyer     Buyer   @relation(fields: [buyerId], references: [id])
+
+  @@map("buyer_contacts")
+}
+
+// ─── INQUIRY ──────────────────────────────────────────────────────────────────
+
+model Inquiry {
+  id              String        @id @default(cuid())
+  inquiryNumber   String        @unique
+  status          InquiryStatus @default(NEW)
+  
+  // Source
+  intakeToken     String?       @unique  // QR / form link token
+  intakeSource    String?       // QR_CODE, WEB_FORM, EMAIL, WALK_IN, PHONE
+  
+  // Buyer info
+  buyerId         String?
+  buyerName       String        // from form submission
+  billingAddress  String?
+  shippingAddress String?
+  contactNumber   String?
+  contactEmail    String?
+  
+  // Order info
+  shipmentDate    DateTime?
+  itemDetails     String?       // style / item description
+  quantity        Int?
+  fabricNotes     String?
+  trimsNotes      String?
+  printingNotes   String?
+  otherComments   String?
+  
+  // Internal
+  assignedToId    String?
+  duplicateOfId   String?
+  rejectionReason String?
+  convertedOrderId String?      @unique
+  
+  createdById     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  buyer           Buyer?        @relation(fields: [buyerId], references: [id])
+  createdBy       User?         @relation("InquiryCreatedBy", fields: [createdById], references: [id])
+  attachments     InquiryAttachment[]
+  order           Order?        @relation(fields: [convertedOrderId], references: [id])
+
+  @@index([status])
+  @@index([buyerName])
+  @@index([shipmentDate])
+  @@map("inquiries")
+}
+
+model InquiryAttachment {
+  id          String  @id @default(cuid())
+  inquiryId   String
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  
+  inquiry     Inquiry @relation(fields: [inquiryId], references: [id])
+
+  @@map("inquiry_attachments")
+}
+
+// ─── STYLES (Master) ──────────────────────────────────────────────────────────
+
+model Style {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String?  // Woven, Knit, Denim, etc.
+  description String?
+  buyerId     String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderLines  OrderLine[]
+  techPacks   TechPack[]
+
+  @@map("styles")
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique
+  type                  OrderType   @default(PRODUCTION)
+  status                OrderStatus @default(REVIEW)
+  
+  // Source
+  inquiryId             String?
+  buyerId               String
+  
+  // Assignment
+  merchandiserId        String?
+  productionManagerId   String?
+  createdById           String
+  
+  // Dates
+  orderDate             DateTime    @default(now())
+  shipmentDate          DateTime?
+  expectedDeliveryDate  DateTime?
+  actualDeliveryDate    DateTime?
+  
+  // Commercial (finance-restricted)
+  paymentTerms          String?
+  taxMode               String?     // GST, VAT, NONE
+  taxRate               Decimal?    @db.Decimal(5, 2)
+  currency              String      @default("INR")
+  
+  // Internal flags
+  isLocked              Boolean     @default(false)
+  reopenReason          String?
+  notes                 String?
+  
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  deletedAt             DateTime?
+
+  // Relations
+  inquiry               Inquiry?
+  buyer                 Buyer       @relation(fields: [buyerId], references: [id])
+  merchandiser          User?       @relation("MerchandiserOrders", fields: [merchandiserId], references: [id])
+  productionManager     User?       @relation("ProductionManagerOrders", fields: [productionManagerId], references: [id])
+  createdBy             User        @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  
+  orderLines            OrderLine[]
+  costing               Costing?
+  tnaMilestones         TnaMilestone[]
+  techPacks             TechPack[]
+  patterns              Pattern[]
+  bomItems              BomItem[]
+  jobWorkRequirements   JobWorkRequirement[]
+  materialRequests      MaterialRequest[]
+  purchaseOrders        PurchaseOrder[]
+  productionPlan        ProductionPlan?
+  shipments             Shipment[]
+  invoices              Invoice[]
+  documents             Document[]
+  comments              Comment[]
+  approvals             Approval[]
+  activityLogs          ActivityLog[]
+  notifications         Notification[]
+  statusHistory         OrderStatusHistory[]
+
+  @@index([status])
+  @@index([orderNumber])
+  @@index([buyerId])
+  @@index([shipmentDate])
+  @@index([merchandiserId])
+  @@map("orders")
+}
+
+model OrderLine {
+  id          String  @id @default(cuid())
+  orderId     String
+  styleId     String?
+  styleName   String
+  description String?
+  color       String?
+  sizes       Json?   // { "S": 100, "M": 200, "L": 150 }
+  quantity    Int
+  unit        String  @default("PCS")
+  notes       String?
+  
+  order       Order   @relation(fields: [orderId], references: [id])
+  style       Style?  @relation(fields: [styleId], references: [id])
+  bomItems    BomItem[]
+
+  @@map("order_lines")
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(cuid())
+  orderId     String
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  changedById String?
+  note        String?
+  changedAt   DateTime    @default(now())
+  
+  order       Order       @relation(fields: [orderId], references: [id])
+
+  @@map("order_status_history")
+}
+
+// ─── COSTING (Finance-restricted) ─────────────────────────────────────────────
+
+model Costing {
+  id                String    @id @default(cuid())
+  orderId           String    @unique
+  
+  // Fabric
+  fabricCost        Decimal   @default(0) @db.Decimal(15, 2)
+  trimmingsCost     Decimal   @default(0) @db.Decimal(15, 2)
+  accessoriesCost   Decimal   @default(0) @db.Decimal(15, 2)
+  packagingCost     Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Labour
+  cuttingCost       Decimal   @default(0) @db.Decimal(15, 2)
+  stitchingCost     Decimal   @default(0) @db.Decimal(15, 2)
+  finishingCost     Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Job work
+  printingCost      Decimal   @default(0) @db.Decimal(15, 2)
+  embroideryCost    Decimal   @default(0) @db.Decimal(15, 2)
+  washingCost       Decimal   @default(0) @db.Decimal(15, 2)
+  otherJobWorkCost  Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Overhead & transport
+  overheadCost      Decimal   @default(0) @db.Decimal(15, 2)
+  shippingCost      Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Financials
+  totalCost         Decimal   @default(0) @db.Decimal(15, 2)
+  sellingRate       Decimal   @default(0) @db.Decimal(15, 2) // per piece
+  totalRevenue      Decimal   @default(0) @db.Decimal(15, 2)
+  grossMargin       Decimal   @default(0) @db.Decimal(15, 2)
+  marginPercent     Decimal   @default(0) @db.Decimal(5, 2)
+  
+  // Approval
+  approvalStatus    ApprovalStatus @default(PENDING)
+  approvedById      String?
+  approvedAt        DateTime?
+  notes             String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  order             Order     @relation(fields: [orderId], references: [id])
+  lineItems         CostingLine[]
+
+  @@map("costings")
+}
+
+model CostingLine {
+  id          String  @id @default(cuid())
+  costingId   String
+  category    String
+  description String
+  quantity    Decimal @db.Decimal(15, 3)
+  unit        String
+  rate        Decimal @db.Decimal(15, 4)
+  amount      Decimal @db.Decimal(15, 2)
+  notes       String?
+  
+  costing     Costing @relation(fields: [costingId], references: [id])
+
+  @@map("costing_lines")
+}
+
+// ─── TNA MILESTONES ───────────────────────────────────────────────────────────
+
+model TnaMilestone {
+  id              String    @id @default(cuid())
+  orderId         String
+  name            String
+  description     String?
+  plannedDate     DateTime
+  actualDate      DateTime?
+  status          TnaStatus @default(PENDING)
+  delayReason     String?
+  responsibleRole UserRole?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  order           Order     @relation(fields: [orderId], references: [id])
+  updates         TnaUpdate[]
+
+  @@index([orderId])
+  @@index([plannedDate])
+  @@map("tna_milestones")
+}
+
+model TnaUpdate {
+  id             String       @id @default(cuid())
+  milestoneId    String
+  note           String
+  updatedById    String?
+  updatedAt      DateTime     @default(now())
+  
+  milestone      TnaMilestone @relation(fields: [milestoneId], references: [id])
+
+  @@map("tna_updates")
+}
+
+// ─── TECH PACK ────────────────────────────────────────────────────────────────
+
+model TechPack {
+  id              String         @id @default(cuid())
+  orderId         String
+  styleId         String?
+  title           String
+  version         String         @default("v1")
+  approvalStatus  ApprovalStatus @default(PENDING)
+  approvedById    String?
+  approvedAt      DateTime?
+  buyerComments   String?
+  fitComments     String?
+  notes           String?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  order           Order          @relation(fields: [orderId], references: [id])
+  style           Style?         @relation(fields: [styleId], references: [id])
+  files           TechPackFile[]
+
+  @@index([orderId])
+  @@map("tech_packs")
+}
+
+model TechPackFile {
+  id          String   @id @default(cuid())
+  techPackId  String
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  pageNumber  Int?
+  description String?
+  uploadedAt  DateTime @default(now())
+  
+  techPack    TechPack @relation(fields: [techPackId], references: [id])
+
+  @@map("tech_pack_files")
+}
+
+// ─── PATTERNS ─────────────────────────────────────────────────────────────────
+
+model Pattern {
+  id              String         @id @default(cuid())
+  orderId         String
+  name            String
+  version         String         @default("v1")
+  size            String?
+  grainLine       String?
+  approvalStatus  ApprovalStatus @default(PENDING)
+  approvedById    String?
+  approvedAt      DateTime?
+  notes           String?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  order           Order          @relation(fields: [orderId], references: [id])
+  files           PatternFile[]
+
+  @@map("patterns")
+}
+
+model PatternFile {
+  id          String   @id @default(cuid())
+  patternId   String
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  description String?
+  uploadedAt  DateTime @default(now())
+  
+  pattern     Pattern  @relation(fields: [patternId], references: [id])
+
+  @@map("pattern_files")
+}
+
+// ─── BOM (Bill of Materials) ───────────────────────────────────────────────────
+
+model BomItem {
+  id              String  @id @default(cuid())
+  orderId         String
+  orderLineId     String?
+  
+  category        String  // FABRIC, TRIMS, ACCESSORIES, PACKAGING, LABELS, TAGS
+  itemName        String
+  description     String?
+  specification   String?
+  color           String?
+  
+  requiredQty     Decimal @db.Decimal(15, 3)
+  unit            String  // MTR, PCS, KG, YARDS, DOZEN
+  wastagePercent  Decimal @default(5) @db.Decimal(5, 2)
+  netRequiredQty  Decimal @db.Decimal(15, 3)
+  
+  vendorId        String?
+  estimatedRate   Decimal? @db.Decimal(15, 4)
+  estimatedAmount Decimal? @db.Decimal(15, 2)
+  
+  notes           String?
+  isJobWork       Boolean @default(false)
+  
+  order           Order         @relation(fields: [orderId], references: [id])
+  orderLine       OrderLine?    @relation(fields: [orderLineId], references: [id])
+  vendor          Vendor?       @relation(fields: [vendorId], references: [id])
+  materialRequestLines MaterialRequestLine[]
+  
+  @@index([orderId])
+  @@map("bom_items")
+}
+
+model JobWorkRequirement {
+  id              String  @id @default(cuid())
+  orderId         String
+  type            String  // PRINTING, EMBROIDERY, WASHING, DYEING, FINISHING, STITCHING_SUB
+  description     String?
+  quantity        Int?
+  unit            String?
+  vendorId        String?
+  rate            Decimal? @db.Decimal(15, 4)
+  amount          Decimal? @db.Decimal(15, 2)
+  dueDate         DateTime?
+  status          String   @default("PENDING")
+  notes           String?
+  
+  order           Order    @relation(fields: [orderId], references: [id])
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
+
+  @@map("job_work_requirements")
+}
+
+// ─── VENDORS ──────────────────────────────────────────────────────────────────
+
+model Vendor {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  type            String?   // FABRIC, TRIMS, JOB_WORK, LOGISTICS, MISC
+  email           String?
+  phone           String?
+  address         String?
+  country         String?
+  taxNumber       String?
+  paymentTerms    String?
+  bankDetails     Json?
+  rating          Int?      @default(3) // 1-5
+  notes           String?
+  isActive        Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  bomItems        BomItem[]
+  jobWorks        JobWorkRequirement[]
+  purchaseOrders  PurchaseOrder[]
+  stockItems      StockItem[]
+
+  @@map("vendors")
+}
+
+// ─── MATERIAL REQUESTS ────────────────────────────────────────────────────────
+
+model MaterialRequest {
+  id              String        @id @default(cuid())
+  requestNumber   String        @unique
+  orderId         String
+  requestedById   String?
+  status          MaterialStatus @default(PENDING)
+  notes           String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order           Order         @relation(fields: [orderId], references: [id])
+  lines           MaterialRequestLine[]
+
+  @@index([orderId])
+  @@map("material_requests")
+}
+
+model MaterialRequestLine {
+  id                String  @id @default(cuid())
+  requestId         String
+  bomItemId         String?
+  itemName          String
+  category          String?
+  requiredQty       Decimal @db.Decimal(15, 3)
+  unit              String
+  availableQty      Decimal @default(0) @db.Decimal(15, 3)
+  shortageQty       Decimal @default(0) @db.Decimal(15, 3)
+  status            MaterialStatus @default(PENDING)
+  notes             String?
+  
+  request           MaterialRequest @relation(fields: [requestId], references: [id])
+  bomItem           BomItem?        @relation(fields: [bomItemId], references: [id])
+  purchaseOrderLines PurchaseOrderLine[]
+
+  @@map("material_request_lines")
+}
+
+// ─── PURCHASE ORDERS ──────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id              String              @id @default(cuid())
+  poNumber        String              @unique
+  orderId         String
+  vendorId        String
+  createdById     String?
+  status          PurchaseOrderStatus @default(DRAFT)
+  
+  currency        String              @default("INR")
+  totalAmount     Decimal             @default(0) @db.Decimal(15, 2)
+  taxAmount       Decimal             @default(0) @db.Decimal(15, 2)
+  grandTotal      Decimal             @default(0) @db.Decimal(15, 2)
+  
+  paymentTerms    String?
+  deliveryDate    DateTime?
+  deliveryAddress String?
+  notes           String?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  order           Order    @relation(fields: [orderId], references: [id])
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  createdBy       User?    @relation(fields: [createdById], references: [id])
+  lines           PurchaseOrderLine[]
+  inwardRecords   Inward[]
+
+  @@index([poNumber])
+  @@index([orderId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id                  String    @id @default(cuid())
+  purchaseOrderId     String
+  materialRequestLineId String?
+  itemName            String
+  description         String?
+  quantity            Decimal   @db.Decimal(15, 3)
+  unit                String
+  rate                Decimal   @db.Decimal(15, 4)
+  amount              Decimal   @db.Decimal(15, 2)
+  receivedQty         Decimal   @default(0) @db.Decimal(15, 3)
+  pendingQty          Decimal   @default(0) @db.Decimal(15, 3)
+  notes               String?
+  
+  purchaseOrder       PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id])
+  materialRequestLine MaterialRequestLine? @relation(fields: [materialRequestLineId], references: [id])
+  inwardLines         InwardLine[]
+
+  @@map("purchase_order_lines")
+}
+
+// ─── INVENTORY / STOCK ────────────────────────────────────────────────────────
+
+model StockItem {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  category        String
+  unit            String
+  description     String?
+  vendorId        String?
+  reorderLevel    Decimal   @default(0) @db.Decimal(15, 3)
+  currentStock    Decimal   @default(0) @db.Decimal(15, 3)
+  reservedStock   Decimal   @default(0) @db.Decimal(15, 3)
+  availableStock  Decimal   @default(0) @db.Decimal(15, 3)
+  lastRate        Decimal?  @db.Decimal(15, 4)
+  location        String?   // shelf, bin reference
+  notes           String?
+  isActive        Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  vendor          Vendor?   @relation(fields: [vendorId], references: [id])
+  transactions    StockTransaction[]
+
+  @@index([category])
+  @@map("stock_items")
+}
+
+model StockTransaction {
+  id              String               @id @default(cuid())
+  stockItemId     String
+  transactionType StockTransactionType
+  quantity        Decimal              @db.Decimal(15, 3)
+  rate            Decimal?             @db.Decimal(15, 4)
+  referenceType   String?              // PURCHASE_ORDER, MATERIAL_REQUEST, ADJUSTMENT
+  referenceId     String?
+  orderId         String?
+  note            String?
+  createdById     String?
+  createdAt       DateTime             @default(now())
+  
+  stockItem       StockItem            @relation(fields: [stockItemId], references: [id])
+
+  @@index([stockItemId])
+  @@index([createdAt])
+  @@map("stock_transactions")
+}
+
+model Inward {
+  id              String    @id @default(cuid())
+  grnNumber       String    @unique // Goods Receipt Note
+  purchaseOrderId String
+  receivedDate    DateTime  @default(now())
+  receivedById    String?
+  vehicleNumber   String?
+  driverName      String?
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  lines           InwardLine[]
+
+  @@map("inwards")
+}
+
+model InwardLine {
+  id                  String    @id @default(cuid())
+  inwardId            String
+  purchaseOrderLineId String
+  receivedQty         Decimal   @db.Decimal(15, 3)
+  acceptedQty         Decimal   @db.Decimal(15, 3)
+  rejectedQty         Decimal   @default(0) @db.Decimal(15, 3)
+  rejectionReason     String?
+  stockItemId         String?
+  notes               String?
+  
+  inward              Inward            @relation(fields: [inwardId], references: [id])
+  purchaseOrderLine   PurchaseOrderLine @relation(fields: [purchaseOrderLineId], references: [id])
+
+  @@map("inward_lines")
+}
+
+// ─── PRODUCTION ───────────────────────────────────────────────────────────────
+
+model ProductionPlan {
+  id                  String    @id @default(cuid())
+  orderId             String    @unique
+  plannedStartDate    DateTime?
+  plannedFinishDate   DateTime?
+  actualStartDate     DateTime?
+  actualFinishDate    DateTime?
+  productionLine      String?
+  supervisor          String?
+  targetOutputPerDay  Int?
+  totalPlannedQty     Int?
+  isApproved          Boolean   @default(false)
+  approvedById        String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  order               Order     @relation(fields: [orderId], references: [id])
+  stages              ProductionStageTracker[]
+
+  @@map("production_plans")
+}
+
+model ProductionStageTracker {
+  id              String          @id @default(cuid())
+  productionPlanId String
+  stage           ProductionStage
+  plannedQty      Int             @default(0)
+  actualQty       Int             @default(0)
+  rejectionQty    Int             @default(0)
+  reworkQty       Int             @default(0)
+  balanceQty      Int             @default(0)
+  status          String          @default("PENDING") // PENDING, IN_PROGRESS, DONE
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  productionPlan  ProductionPlan  @relation(fields: [productionPlanId], references: [id])
+  updates         ProductionUpdate[]
+
+  @@map("production_stage_trackers")
+}
+
+model ProductionUpdate {
+  id              String                 @id @default(cuid())
+  stageTrackerId  String
+  date            DateTime               @default(now())
+  plannedQty      Int                    @default(0)
+  actualQty       Int                    @default(0)
+  rejectionQty    Int                    @default(0)
+  reworkQty       Int                    @default(0)
+  delayReason     String?
+  note            String?
+  updatedById     String?
+  
+  stageTracker    ProductionStageTracker @relation(fields: [stageTrackerId], references: [id])
+  updatedBy       User?                  @relation(fields: [updatedById], references: [id])
+
+  @@map("production_updates")
+}
+
+// ─── SHIPMENTS ────────────────────────────────────────────────────────────────
+
+model Shipment {
+  id                    String         @id @default(cuid())
+  shipmentNumber        String         @unique
+  orderId               String
+  status                ShipmentStatus @default(DRAFT)
+  
+  transporter           String?
+  trackingNumber        String?
+  courierName           String?
+  
+  cartonCount           Int?
+  grossWeight           Decimal?       @db.Decimal(10, 3)
+  netWeight             Decimal?       @db.Decimal(10, 3)
+  cbm                   Decimal?       @db.Decimal(10, 3) // cubic meters
+  
+  dispatchDate          DateTime?
+  expectedDeliveryDate  DateTime?
+  actualDeliveryDate    DateTime?
+  
+  shippingCost          Decimal?       @db.Decimal(15, 2)
+  insuranceCost         Decimal?       @db.Decimal(15, 2)
+  
+  fromAddress           String?
+  toAddress             String?
+  
+  podUrl                String?        // Proof of Delivery
+  notes                 String?
+  
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  
+  order                 Order          @relation(fields: [orderId], references: [id])
+  updates               ShipmentUpdate[]
+
+  @@index([trackingNumber])
+  @@index([orderId])
+  @@map("shipments")
+}
+
+model ShipmentUpdate {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  location    String?
+  status      String
+  note        String?
+  updatedAt   DateTime @default(now())
+  
+  shipment    Shipment @relation(fields: [shipmentId], references: [id])
+
+  @@map("shipment_updates")
+}
+
+// ─── INVOICES & PAYMENTS ──────────────────────────────────────────────────────
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  orderId         String
+  status          InvoiceStatus @default(DRAFT)
+  
+  invoiceDate     DateTime      @default(now())
+  dueDate         DateTime?
+  
+  currency        String        @default("INR")
+  subTotal        Decimal       @default(0) @db.Decimal(15, 2)
+  taxAmount       Decimal       @default(0) @db.Decimal(15, 2)
+  discount        Decimal       @default(0) @db.Decimal(15, 2)
+  totalAmount     Decimal       @default(0) @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  balanceAmount   Decimal       @default(0) @db.Decimal(15, 2)
+  
+  notes           String?
+  termsConditions String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  
+  order           Order         @relation(fields: [orderId], references: [id])
+  lines           InvoiceLine[]
+  payments        Payment[]
+
+  @@index([invoiceNumber])
+  @@index([orderId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Decimal @db.Decimal(15, 3)
+  unit        String?
+  rate        Decimal @db.Decimal(15, 4)
+  amount      Decimal @db.Decimal(15, 2)
+  taxRate     Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount   Decimal @default(0) @db.Decimal(15, 2)
+  total       Decimal @db.Decimal(15, 2)
+  
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_lines")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  paymentNumber   String        @unique
+  invoiceId       String
+  paymentDate     DateTime      @default(now())
+  amount          Decimal       @db.Decimal(15, 2)
+  currency        String        @default("INR")
+  paymentMode     String?       // NEFT, RTGS, CHEQUE, CASH, SWIFT, LC
+  referenceNumber String?
+  bankName        String?
+  proofUrl        String?
+  status          PaymentStatus @default(PENDING)
+  notes           String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ─── DOCUMENTS ────────────────────────────────────────────────────────────────
+
+model Document {
+  id              String           @id @default(cuid())
+  orderId         String
+  category        DocumentCategory
+  title           String
+  description     String?
+  tags            String[]
+  
+  // Current version info
+  currentVersion  Int              @default(1)
+  fileName        String
+  fileUrl         String
+  fileType        String?
+  fileSize        Int?
+  
+  approvalStatus  ApprovalStatus   @default(PENDING)
+  approvedById    String?
+  approvedAt      DateTime?
+  
+  uploadedById    String?
+  uploadedAt      DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  
+  // Metadata
+  buyerId         String?
+  styleName       String?
+  
+  order           Order            @relation(fields: [orderId], references: [id])
+  uploadedBy      User?            @relation(fields: [uploadedById], references: [id])
+  versions        DocumentVersion[]
+  comments        Comment[]
+
+  @@index([orderId])
+  @@index([category])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id          String   @id @default(cuid())
+  documentId  String
+  version     Int
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  changeNote  String?
+  uploadedById String?
+  uploadedAt  DateTime @default(now())
+  
+  document    Document @relation(fields: [documentId], references: [id])
+
+  @@map("document_versions")
+}
+
+// ─── COMMENTS ─────────────────────────────────────────────────────────────────
+
+model Comment {
+  id            String    @id @default(cuid())
+  content       String
+  authorId      String
+  
+  // Polymorphic relation
+  orderId       String?
+  documentId    String?
+  
+  isInternal    Boolean   @default(true) // false = visible to client
+  isPinned      Boolean   @default(false)
+  parentId      String?   // for threaded replies
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  
+  author        User      @relation(fields: [authorId], references: [id])
+  order         Order?    @relation(fields: [orderId], references: [id])
+  document      Document? @relation(fields: [documentId], references: [id])
+  parent        Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+
+  @@index([orderId])
+  @@map("comments")
+}
+
+// ─── APPROVALS ────────────────────────────────────────────────────────────────
+
+model Approval {
+  id            String         @id @default(cuid())
+  orderId       String?
+  type          String         // COSTING, TECH_PACK, PATTERN, PRE_PRODUCTION, INVOICE
+  referenceId   String         // ID of the item being approved
+  referenceType String         // table name
+  status        ApprovalStatus @default(PENDING)
+  requestedById String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  note          String?
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  order         Order?         @relation(fields: [orderId], references: [id])
+  reviewedBy    User?          @relation(fields: [reviewedById], references: [id])
+
+  @@index([orderId])
+  @@index([type])
+  @@map("approvals")
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  title       String
+  message     String
+  orderId     String?
+  referenceId String?
+  referenceType String?
+  isRead      Boolean              @default(false)
+  readAt      DateTime?
+  actionUrl   String?
+  
+  createdAt   DateTime             @default(now())
+  
+  user        User                 @relation(fields: [userId], references: [id])
+  order       Order?               @relation(fields: [orderId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ─── ACTIVITY LOG (Audit Trail) ───────────────────────────────────────────────
+
+model ActivityLog {
+  id            String         @id @default(cuid())
+  userId        String?
+  userEmail     String?
+  userRole      UserRole?
+  action        ActivityAction
+  entityType    String         // table/entity name
+  entityId      String
+  orderId       String?
+  description   String
+  oldValues     Json?
+  newValues     Json?
+  ipAddress     String?
+  userAgent     String?
+  
+  createdAt     DateTime       @default(now())
+  
+  user          User?          @relation(fields: [userId], references: [id])
+  order         Order?         @relation(fields: [orderId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([orderId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ─── SYSTEM SETTINGS ──────────────────────────────────────────────────────────
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  group       String?  // GENERAL, NOTIFICATIONS, INTEGRATIONS, FINANCIALS
+  isPublic    Boolean  @default(false) // if true, accessible without auth
+  
+  updatedAt   DateTime @updatedAt @default(now())
+  updatedById String?
+
+  @@map("system_settings")
+}
+
+model IntakeForm {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  buyerId     String?
+  buyerName   String?
+  description String?
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdById String?
+  qrCodeUrl   String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@map("intake_forms")
+}
