@@ -121,7 +121,7 @@ export default function IntakeFormClient({
 
       // API returns JSON on success (we handle redirect here)
       const data = await res.json();
-      router.push(`/intake/${token}/success?id=${data.inquiryId}`);
+      router.push(`/intake/${token}/success?id=${data.inquiryId}&ct=${data.clientToken}`);
     } catch (err: any) {
       setError(err.message);
     } finally {

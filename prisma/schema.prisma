@@ -55,6 +55,13 @@ enum InquiryStatus {
   DUPLICATE
 }
 
+enum ChangeRequestStatus {
+  PENDING
+  IN_REVIEW
+  APPLIED
+  REJECTED
+}
+
 enum TnaStatus {
   PENDING
   IN_PROGRESS
@@ -220,6 +227,7 @@ model User {
   assignedOrders        Order[]         @relation("MerchandiserOrders")
   productionOrders      Order[]         @relation("ProductionManagerOrders")
   createdInquiries      Inquiry[]       @relation("InquiryCreatedBy")
+  resolvedChangeRequests ClientChangeRequest[] @relation("ChangeRequestResolvedBy")
   createdOrders         Order[]         @relation("OrderCreatedBy")
   comments              Comment[]
   approvals             Approval[]
@@ -341,6 +349,9 @@ model Inquiry {
   printingNotes   String?
   otherComments   String?
   
+  // Client portal access
+  clientToken     String?       @unique  // token for client tracking portal
+
   // Internal
   assignedToId    String?
   duplicateOfId   String?
@@ -356,6 +367,7 @@ model Inquiry {
   createdBy       User?         @relation("InquiryCreatedBy", fields: [createdById], references: [id])
   attachments     InquiryAttachment[]
   items           InquiryItem[]
+  changeRequests  ClientChangeRequest[]
   order           Order?        @relation(fields: [convertedOrderId], references: [id])
 
   @@index([status])
@@ -377,6 +389,29 @@ model InquiryItem {
   inquiry          Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
   @@map("inquiry_items")
+}
+
+model ClientChangeRequest {
+  id             String              @id @default(cuid())
+  inquiryId      String
+  orderId        String?
+  clientName     String?
+  message        String              // free-text description of requested changes
+  requestedItems Json?               // optional structured: [{itemName, quantity, notes}]
+  newShipmentDate DateTime?
+  status         ChangeRequestStatus @default(PENDING)
+  resolutionNote String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  inquiry        Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  resolvedBy     User?    @relation("ChangeRequestResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([inquiryId])
+  @@index([status])
+  @@map("client_change_requests")
 }
 
 model InquiryAttachment {
