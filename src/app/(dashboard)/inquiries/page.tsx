@@ -170,7 +170,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   <p className="text-xs text-muted-foreground">{formatDate(inquiry.createdAt)}</p>
                   {inquiry.status === "NEW" && canConvert && (
                     <Link
-                      href={`/inquiries/${inquiry.id}/convert`}
+                      href={`/inquiries/${inquiry.id}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
                     >
                       Convert to Order <ArrowRight size={12} />
