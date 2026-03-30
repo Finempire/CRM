@@ -22,8 +22,8 @@ export async function GET(request: Request) {
     ...(category ? { category } : {}),
     ...(search ? {
       OR: [
-        { title: { contains: search, mode: "insensitive" } },
-        { fileName: { contains: search, mode: "insensitive" } },
+        { title: { contains: search } },
+        { fileName: { contains: search } },
       ],
     } : {}),
   };
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       fileUrl,
       fileType: fileType || null,
       fileSize: fileSize ? parseInt(fileSize) : null,
-      tags: tags || [],
+      tags: tags ? JSON.stringify(tags) : null,
       approvalStatus: approvalStatus || "PENDING",
       currentVersion: 1,
       uploadedById: session.user.id,

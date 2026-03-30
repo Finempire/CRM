@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import type { UserRole } from "@prisma/client";
 import { ArrowLeft, Package, User, Calendar, FileText, MapPin, Phone, Mail, AlertTriangle } from "lucide-react";
 import { InquiryActions } from "./InquiryActions";
+import { ChangeRequestActions } from "./ChangeRequestActions";
 
 export const metadata: Metadata = { title: "Inquiry Detail" };
 
@@ -25,6 +26,10 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
       buyer: true,
       attachments: true,
       items: { orderBy: { id: "asc" } },
+      changeRequests: {
+        orderBy: { createdAt: "desc" },
+        include: { resolvedBy: { select: { name: true } } },
+      },
       createdBy: { select: { name: true, email: true } },
       order: { select: { id: true, orderNumber: true, status: true } },
     },
@@ -263,6 +268,61 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
                       className="text-xs text-primary hover:underline shrink-0">
                       View
                     </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Change Requests from client */}
+          {inquiry.changeRequests.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-base">Change Requests</h2>
+                {inquiry.changeRequests.some((cr) => cr.status === "PENDING") && (
+                  <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-pulse">
+                    {inquiry.changeRequests.filter((cr) => cr.status === "PENDING").length} Pending
+                  </span>
+                )}
+              </div>
+              <div className="space-y-3">
+                {inquiry.changeRequests.map((cr) => (
+                  <div key={cr.id} className={`border rounded-xl p-4 ${
+                    cr.status === "PENDING" ? "border-amber-300 bg-amber-50/50" : "border-border"
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">{formatDate(cr.createdAt)} · {cr.clientName}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        cr.status === "APPLIED"   ? "bg-green-100 text-green-700" :
+                        cr.status === "REJECTED"  ? "bg-red-100 text-red-700" :
+                        cr.status === "IN_REVIEW" ? "bg-blue-100 text-blue-700" :
+                                                    "bg-amber-100 text-amber-700"
+                      }`}>
+                        {cr.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium mb-1">{cr.message}</p>
+                    {cr.newShipmentDate && (
+                      <p className="text-xs text-muted-foreground">New shipment date requested: {formatDate(cr.newShipmentDate)}</p>
+                    )}
+                    {Array.isArray(cr.requestedItems) && (cr.requestedItems as any[]).length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {(cr.requestedItems as any[]).map((item: any, i: number) => (
+                          <p key={i} className="text-xs bg-background border border-border/50 rounded px-2 py-1">
+                            {item.itemName}{item.quantity ? ` → ${item.quantity} pcs` : ""}{item.notes ? ` · ${item.notes}` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {cr.resolutionNote && (
+                      <p className="text-xs text-muted-foreground mt-2 border-t pt-2">
+                        <span className="font-medium">Resolution:</span> {cr.resolutionNote}
+                        {cr.resolvedBy && ` (by ${cr.resolvedBy.name})`}
+                      </p>
+                    )}
+                    {/* Quick action buttons for pending requests */}
+                    {cr.status === "PENDING" && canConvert && (
+                      <ChangeRequestActions changeRequestId={cr.id} inquiryId={inquiry.id} />
+                    )}
                   </div>
                 ))}
               </div>

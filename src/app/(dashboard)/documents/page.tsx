@@ -41,10 +41,10 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
     ...(sp.orderId ? { orderId: sp.orderId } : {}),
     ...(sp.search ? {
       OR: [
-        { title: { contains: sp.search, mode: "insensitive" } },
-        { fileName: { contains: sp.search, mode: "insensitive" } },
-        { order: { orderNumber: { contains: sp.search, mode: "insensitive" } } },
-        { order: { buyer: { name: { contains: sp.search, mode: "insensitive" } } } },
+        { title: { contains: sp.search } },
+        { fileName: { contains: sp.search } },
+        { order: { orderNumber: { contains: sp.search } } },
+        { order: { buyer: { name: { contains: sp.search } } } },
       ],
     } : {}),
   };

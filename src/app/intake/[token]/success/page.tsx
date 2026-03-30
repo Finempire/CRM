@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = { title: "Inquiry Submitted" };
 
 export default async function IntakeSuccessPage({
-  params,
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ id?: string; ct?: string }>;
 }) {
-  await params; // token not needed on success page
   const sp = await searchParams;
+  const portalUrl = sp.ct ? `/portal/${sp.ct}` : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border p-8 text-center max-w-sm w-full">
+      <div className="bg-white rounded-2xl shadow-sm border p-8 text-center max-w-md w-full">
         {/* Success icon */}
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
           <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -30,19 +28,34 @@ export default async function IntakeSuccessPage({
 
         {sp.id && (
           <p className="text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2 mb-6 font-mono">
-            Reference: {sp.id.slice(-8).toUpperCase()}
+            Reference: {sp.id.slice(-10).toUpperCase()}
           </p>
         )}
 
-        <div className="space-y-2">
-          <p className="text-xs text-slate-400">Need to submit another inquiry?</p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            Go Back
-          </Link>
-        </div>
+        {/* Client portal link */}
+        {portalUrl && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
+            <p className="text-sm font-semibold text-blue-900 mb-1">📦 Track your order</p>
+            <p className="text-xs text-blue-700 mb-3">
+              Save this link to track your order status, view updates, and request changes at any time.
+            </p>
+            <div className="flex items-center gap-2 bg-white border border-blue-200 rounded-lg px-3 py-2 text-xs font-mono text-blue-800 break-all">
+              {typeof window !== "undefined"
+                ? `${window.location.origin}${portalUrl}`
+                : portalUrl}
+            </div>
+            <a
+              href={portalUrl}
+              className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              View Order Status →
+            </a>
+          </div>
+        )}
+
+        <p className="text-xs text-slate-400">
+          Our team will contact you at the details you provided.
+        </p>
       </div>
     </div>
   );

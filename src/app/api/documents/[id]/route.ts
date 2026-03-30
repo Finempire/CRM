@@ -48,7 +48,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     data: {
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
-      ...(tags !== undefined && { tags }),
+      ...(tags !== undefined && { tags: tags ? JSON.stringify(tags) : null }),
       ...(approvalStatus !== undefined && { approvalStatus }),
     },
   });

@@ -27,9 +27,9 @@ export default async function BuyersPage({ searchParams }: { searchParams: Promi
     deletedAt: null as null,
     ...(sp.search && {
       OR: [
-        { name: { contains: sp.search, mode: "insensitive" as const } },
-        { code: { contains: sp.search, mode: "insensitive" as const } },
-        { email: { contains: sp.search, mode: "insensitive" as const } },
+        { name: { contains: sp.search } },
+        { code: { contains: sp.search } },
+        { email: { contains: sp.search } },
       ],
     }),
     ...(sp.country && { country: sp.country }),

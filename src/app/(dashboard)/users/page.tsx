@@ -29,8 +29,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     deletedAt: null,
     ...(sp.search && {
       OR: [
-        { name: { contains: sp.search, mode: "insensitive" as const } },
-        { email: { contains: sp.search, mode: "insensitive" as const } },
+        { name: { contains: sp.search } },
+        { email: { contains: sp.search } },
       ],
     }),
     ...(sp.role && { role: sp.role as UserRole }),

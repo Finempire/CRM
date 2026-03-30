@@ -32,9 +32,9 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
     ...(sp.status && { status: sp.status as InquiryStatus }),
     ...(sp.search && {
       OR: [
-        { inquiryNumber: { contains: sp.search, mode: "insensitive" } },
-        { buyerName: { contains: sp.search, mode: "insensitive" } },
-        { itemDetails: { contains: sp.search, mode: "insensitive" } },
+        { inquiryNumber: { contains: sp.search } },
+        { buyerName: { contains: sp.search } },
+        { itemDetails: { contains: sp.search } },
       ],
     }),
   };

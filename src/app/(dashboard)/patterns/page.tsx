@@ -23,8 +23,8 @@ export default async function PatternsPage({ searchParams }: { searchParams: Pro
     ...(sp.status ? { approvalStatus: sp.status } : {}),
     ...(sp.search ? {
       OR: [
-        { name: { contains: sp.search, mode: "insensitive" } },
-        { order: { orderNumber: { contains: sp.search, mode: "insensitive" } } },
+        { name: { contains: sp.search } },
+        { order: { orderNumber: { contains: sp.search } } },
       ],
     } : {}),
   };

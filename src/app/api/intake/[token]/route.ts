@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateInquiryNumber } from "@/lib/utils";
 import { broadcastNotification } from "@/lib/notifications";
+import { randomBytes } from "crypto";
+
+function generateClientToken(): string {
+  return randomBytes(20).toString("hex"); // 40-char hex token
+}
 
 interface InquiryItemInput {
   itemName: string;
@@ -58,8 +63,8 @@ export async function POST(
     const firstItemName = validItems[0].itemName;
     const existingInquiry = await prisma.inquiry.findFirst({
       where: {
-        buyerName: { equals: buyerName, mode: "insensitive" },
-        items: { some: { itemName: { contains: firstItemName.substring(0, 20), mode: "insensitive" } } },
+        buyerName: { equals: buyerName },
+        items: { some: { itemName: { contains: firstItemName.substring(0, 20) } } },
         shipmentDate: shipmentDate
           ? {
               gte: new Date(new Date(shipmentDate).getTime() - 7 * 24 * 60 * 60 * 1000),
@@ -78,10 +83,13 @@ export async function POST(
     // Summary for itemDetails (legacy field, kept for display convenience)
     const itemSummary = validItems.map((i) => i.itemName).join(", ");
 
+    const clientToken = generateClientToken();
+
     const inquiry = await prisma.inquiry.create({
       data: {
         inquiryNumber,
         status: existingInquiry ? "REVIEWING" : "NEW",
+        clientToken,
         intakeToken: token,
         intakeSource: "QR_CODE",
         buyerName,
@@ -121,7 +129,7 @@ export async function POST(
     });
 
     // Return JSON (client handles redirect)
-    return NextResponse.json({ inquiryId: inquiry.id, inquiryNumber });
+    return NextResponse.json({ inquiryId: inquiry.id, inquiryNumber, clientToken });
   } catch (error) {
     console.error("[Intake] Error:", error);
     return NextResponse.json({ error: "Submission failed. Please try again." }, { status: 500 });
