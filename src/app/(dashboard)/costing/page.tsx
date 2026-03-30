@@ -25,8 +25,8 @@ export default async function CostingPage({ searchParams }: { searchParams: Prom
     where: {
       deletedAt: null,
       OR: query ? [
-        { orderNumber: { contains: query, mode: "insensitive" } },
-        { buyer: { name: { contains: query, mode: "insensitive" } } }
+        { orderNumber: { contains: query } },
+        { buyer: { name: { contains: query } } }
       ] : undefined,
     },
     include: { buyer: true, costing: true, _count: { select: { orderLines: true } } },

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -288,12 +288,12 @@ model Buyer {
   currency        String    @default("INR")
   email           String?
   phone           String?
-  billingAddress  String?
-  shippingAddress String?
+  billingAddress  String?  @db.Text
+  shippingAddress String?  @db.Text
   taxNumber       String?
   paymentTerms    String?
   creditLimit     Decimal?  @db.Decimal(15, 2)
-  notes           String?
+  notes           String?  @db.Text
   isActive        Boolean   @default(true)
   
   createdAt       DateTime  @default(now())
@@ -335,19 +335,19 @@ model Inquiry {
   // Buyer info
   buyerId         String?
   buyerName       String        // from form submission
-  billingAddress  String?
-  shippingAddress String?
+  billingAddress  String?  @db.Text
+  shippingAddress String?  @db.Text
   contactNumber   String?
   contactEmail    String?
   
   // Order info
   shipmentDate    DateTime?
-  itemDetails     String?       // style / item description
+  itemDetails     String?  @db.Text  // style / item description
   quantity        Int?
-  fabricNotes     String?
-  trimsNotes      String?
-  printingNotes   String?
-  otherComments   String?
+  fabricNotes     String?  @db.Text
+  trimsNotes      String?  @db.Text
+  printingNotes   String?  @db.Text
+  otherComments   String?  @db.Text
   
   // Client portal access
   clientToken     String?       @unique  // token for client tracking portal
@@ -355,7 +355,7 @@ model Inquiry {
   // Internal
   assignedToId    String?
   duplicateOfId   String?
-  rejectionReason String?
+  rejectionReason String?  @db.Text
   convertedOrderId String?      @unique
   
   createdById     String?
@@ -380,11 +380,11 @@ model InquiryItem {
   id               String  @id @default(cuid())
   inquiryId        String
   itemName         String
-  styleDescription String?
+  styleDescription String?  @db.Text
   quantity         Int?
-  fabricNotes      String?
-  trimsNotes       String?
-  printingNotes    String?
+  fabricNotes      String?  @db.Text
+  trimsNotes       String?  @db.Text
+  printingNotes    String?  @db.Text
 
   inquiry          Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
@@ -396,11 +396,11 @@ model ClientChangeRequest {
   inquiryId      String
   orderId        String?
   clientName     String?
-  message        String              // free-text description of requested changes
-  requestedItems Json?               // optional structured: [{itemName, quantity, notes}]
+  message        String  @db.Text  // free-text description of requested changes
+  requestedItems Json?  @db.Json  // optional structured: [{itemName, quantity, notes}]
   newShipmentDate DateTime?
   status         ChangeRequestStatus @default(PENDING)
-  resolutionNote String?
+  resolutionNote String?  @db.Text
   resolvedById   String?
   resolvedAt     DateTime?
   createdAt      DateTime            @default(now())
@@ -434,7 +434,7 @@ model Style {
   code        String   @unique
   name        String
   category    String?  // Woven, Knit, Denim, etc.
-  description String?
+  description String?  @db.Text
   buyerId     String?
   isActive    Boolean  @default(true)
   
@@ -478,8 +478,8 @@ model Order {
   
   // Internal flags
   isLocked              Boolean     @default(false)
-  reopenReason          String?
-  notes                 String?
+  reopenReason          String?  @db.Text
+  notes                 String?  @db.Text
   
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
@@ -524,12 +524,12 @@ model OrderLine {
   orderId     String
   styleId     String?
   styleName   String
-  description String?
+  description String?  @db.Text
   color       String?
-  sizes       Json?   // { "S": 100, "M": 200, "L": 150 }
+  sizes       Json?  @db.Json  // { "S": 100, "M": 200, "L": 150 }
   quantity    Int
   unit        String  @default("PCS")
-  notes       String?
+  notes       String?  @db.Text
   
   order       Order   @relation(fields: [orderId], references: [id])
   style       Style?  @relation(fields: [styleId], references: [id])
@@ -590,7 +590,7 @@ model Costing {
   approvalStatus    ApprovalStatus @default(PENDING)
   approvedById      String?
   approvedAt        DateTime?
-  notes             String?
+  notes             String?  @db.Text
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -605,12 +605,12 @@ model CostingLine {
   id          String  @id @default(cuid())
   costingId   String
   category    String
-  description String
+  description String  @db.Text
   quantity    Decimal @db.Decimal(15, 3)
   unit        String
   rate        Decimal @db.Decimal(15, 4)
   amount      Decimal @db.Decimal(15, 2)
-  notes       String?
+  notes       String?  @db.Text
   
   costing     Costing @relation(fields: [costingId], references: [id])
 
@@ -623,11 +623,11 @@ model TnaMilestone {
   id              String    @id @default(cuid())
   orderId         String
   name            String
-  description     String?
+  description     String?  @db.Text
   plannedDate     DateTime
   actualDate      DateTime?
   status          TnaStatus @default(PENDING)
-  delayReason     String?
+  delayReason     String?  @db.Text
   responsibleRole UserRole?
   
   createdAt       DateTime  @default(now())
@@ -664,9 +664,9 @@ model TechPack {
   approvalStatus  ApprovalStatus @default(PENDING)
   approvedById    String?
   approvedAt      DateTime?
-  buyerComments   String?
-  fitComments     String?
-  notes           String?
+  buyerComments   String?  @db.Text
+  fitComments     String?  @db.Text
+  notes           String?  @db.Text
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -687,7 +687,7 @@ model TechPackFile {
   fileType    String?
   fileSize    Int?
   pageNumber  Int?
-  description String?
+  description String?  @db.Text
   uploadedAt  DateTime @default(now())
   
   techPack    TechPack @relation(fields: [techPackId], references: [id])
@@ -707,7 +707,7 @@ model Pattern {
   approvalStatus  ApprovalStatus @default(PENDING)
   approvedById    String?
   approvedAt      DateTime?
-  notes           String?
+  notes           String?  @db.Text
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -725,7 +725,7 @@ model PatternFile {
   fileUrl     String
   fileType    String?
   fileSize    Int?
-  description String?
+  description String?  @db.Text
   uploadedAt  DateTime @default(now())
   
   pattern     Pattern  @relation(fields: [patternId], references: [id])
@@ -742,7 +742,7 @@ model BomItem {
   
   category        String  // FABRIC, TRIMS, ACCESSORIES, PACKAGING, LABELS, TAGS
   itemName        String
-  description     String?
+  description     String?  @db.Text
   specification   String?
   color           String?
   
@@ -755,7 +755,7 @@ model BomItem {
   estimatedRate   Decimal? @db.Decimal(15, 4)
   estimatedAmount Decimal? @db.Decimal(15, 2)
   
-  notes           String?
+  notes           String?  @db.Text
   isJobWork       Boolean @default(false)
   
   order           Order         @relation(fields: [orderId], references: [id])
@@ -771,7 +771,7 @@ model JobWorkRequirement {
   id              String  @id @default(cuid())
   orderId         String
   type            String  // PRINTING, EMBROIDERY, WASHING, DYEING, FINISHING, STITCHING_SUB
-  description     String?
+  description     String?  @db.Text
   quantity        Int?
   unit            String?
   vendorId        String?
@@ -779,7 +779,7 @@ model JobWorkRequirement {
   amount          Decimal? @db.Decimal(15, 2)
   dueDate         DateTime?
   status          String   @default("PENDING")
-  notes           String?
+  notes           String?  @db.Text
   
   order           Order    @relation(fields: [orderId], references: [id])
   vendor          Vendor?  @relation(fields: [vendorId], references: [id])
@@ -796,13 +796,13 @@ model Vendor {
   type            String?   // FABRIC, TRIMS, JOB_WORK, LOGISTICS, MISC
   email           String?
   phone           String?
-  address         String?
+  address         String?  @db.Text
   country         String?
   taxNumber       String?
   paymentTerms    String?
-  bankDetails     Json?
+  bankDetails     Json?  @db.Json
   rating          Int?      @default(3) // 1-5
-  notes           String?
+  notes           String?  @db.Text
   isActive        Boolean   @default(true)
   
   createdAt       DateTime  @default(now())
@@ -825,7 +825,7 @@ model MaterialRequest {
   orderId         String
   requestedById   String?
   status          MaterialStatus @default(PENDING)
-  notes           String?
+  notes           String?  @db.Text
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -848,7 +848,7 @@ model MaterialRequestLine {
   availableQty      Decimal @default(0) @db.Decimal(15, 3)
   shortageQty       Decimal @default(0) @db.Decimal(15, 3)
   status            MaterialStatus @default(PENDING)
-  notes             String?
+  notes             String?  @db.Text
   
   request           MaterialRequest @relation(fields: [requestId], references: [id])
   bomItem           BomItem?        @relation(fields: [bomItemId], references: [id])
@@ -875,7 +875,7 @@ model PurchaseOrder {
   paymentTerms    String?
   deliveryDate    DateTime?
   deliveryAddress String?
-  notes           String?
+  notes           String?  @db.Text
   
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -897,14 +897,14 @@ model PurchaseOrderLine {
   purchaseOrderId     String
   materialRequestLineId String?
   itemName            String
-  description         String?
+  description         String?  @db.Text
   quantity            Decimal   @db.Decimal(15, 3)
   unit                String
   rate                Decimal   @db.Decimal(15, 4)
   amount              Decimal   @db.Decimal(15, 2)
   receivedQty         Decimal   @default(0) @db.Decimal(15, 3)
   pendingQty          Decimal   @default(0) @db.Decimal(15, 3)
-  notes               String?
+  notes               String?  @db.Text
   
   purchaseOrder       PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id])
   materialRequestLine MaterialRequestLine? @relation(fields: [materialRequestLineId], references: [id])
@@ -921,7 +921,7 @@ model StockItem {
   name            String
   category        String
   unit            String
-  description     String?
+  description     String?  @db.Text
   vendorId        String?
   reorderLevel    Decimal   @default(0) @db.Decimal(15, 3)
   currentStock    Decimal   @default(0) @db.Decimal(15, 3)
@@ -929,7 +929,7 @@ model StockItem {
   availableStock  Decimal   @default(0) @db.Decimal(15, 3)
   lastRate        Decimal?  @db.Decimal(15, 4)
   location        String?   // shelf, bin reference
-  notes           String?
+  notes           String?  @db.Text
   isActive        Boolean   @default(true)
   
   createdAt       DateTime  @default(now())
@@ -970,7 +970,7 @@ model Inward {
   receivedById    String?
   vehicleNumber   String?
   driverName      String?
-  notes           String?
+  notes           String?  @db.Text
   
   createdAt       DateTime  @default(now())
   
@@ -987,9 +987,9 @@ model InwardLine {
   receivedQty         Decimal   @db.Decimal(15, 3)
   acceptedQty         Decimal   @db.Decimal(15, 3)
   rejectedQty         Decimal   @default(0) @db.Decimal(15, 3)
-  rejectionReason     String?
+  rejectionReason     String?  @db.Text
   stockItemId         String?
-  notes               String?
+  notes               String?  @db.Text
   
   inward              Inward            @relation(fields: [inwardId], references: [id])
   purchaseOrderLine   PurchaseOrderLine @relation(fields: [purchaseOrderLineId], references: [id])
@@ -1049,7 +1049,7 @@ model ProductionUpdate {
   actualQty       Int                    @default(0)
   rejectionQty    Int                    @default(0)
   reworkQty       Int                    @default(0)
-  delayReason     String?
+  delayReason     String?  @db.Text
   note            String?
   updatedById     String?
   
@@ -1087,7 +1087,7 @@ model Shipment {
   toAddress             String?
   
   podUrl                String?        // Proof of Delivery
-  notes                 String?
+  notes                 String?  @db.Text
   
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
@@ -1132,7 +1132,7 @@ model Invoice {
   paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
   balanceAmount   Decimal       @default(0) @db.Decimal(15, 2)
   
-  notes           String?
+  notes           String?  @db.Text
   termsConditions String?
   
   createdAt       DateTime      @default(now())
@@ -1152,7 +1152,7 @@ model Invoice {
 model InvoiceLine {
   id          String  @id @default(cuid())
   invoiceId   String
-  description String
+  description String  @db.Text
   quantity    Decimal @db.Decimal(15, 3)
   unit        String?
   rate        Decimal @db.Decimal(15, 4)
@@ -1178,7 +1178,7 @@ model Payment {
   bankName        String?
   proofUrl        String?
   status          PaymentStatus @default(PENDING)
-  notes           String?
+  notes           String?  @db.Text
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -1196,8 +1196,8 @@ model Document {
   orderId         String
   category        DocumentCategory
   title           String
-  description     String?
-  tags            String[]
+  description     String?  @db.Text
+  tags            String?  @db.Text
   
   // Current version info
   currentVersion  Int              @default(1)
@@ -1250,7 +1250,7 @@ model DocumentVersion {
 
 model Comment {
   id            String    @id @default(cuid())
-  content       String
+  content       String  @db.Text
   authorId      String
   
   // Polymorphic relation
@@ -1308,7 +1308,7 @@ model Notification {
   type        NotificationType
   priority    NotificationPriority @default(MEDIUM)
   title       String
-  message     String
+  message     String  @db.Text
   orderId     String?
   referenceId String?
   referenceType String?
@@ -1337,9 +1337,9 @@ model ActivityLog {
   entityType    String         // table/entity name
   entityId      String
   orderId       String?
-  description   String
-  oldValues     Json?
-  newValues     Json?
+  description   String  @db.Text
+  oldValues     Json?  @db.Json
+  newValues     Json?  @db.Json
   ipAddress     String?
   userAgent     String?
   
@@ -1361,7 +1361,7 @@ model SystemSetting {
   id          String   @id @default(cuid())
   key         String   @unique
   value       String
-  description String?
+  description String?  @db.Text
   group       String?  // GENERAL, NOTIFICATIONS, INTEGRATIONS, FINANCIALS
   isPublic    Boolean  @default(false) // if true, accessible without auth
   
@@ -1376,7 +1376,7 @@ model IntakeForm {
   token       String    @unique
   buyerId     String?
   buyerName   String?
-  description String?
+  description String?  @db.Text
   isActive    Boolean   @default(true)
   expiresAt   DateTime?
   createdById String?

@@ -21,8 +21,8 @@ export default async function CostingListPage({ searchParams }: { searchParams: 
     where: {
       deletedAt: null,
       OR: [
-        { orderNumber: { contains: query, mode: "insensitive" } },
-        { buyer: { name: { contains: query, mode: "insensitive" } } }
+        { orderNumber: { contains: query } },
+        { buyer: { name: { contains: query } } }
       ]
     },
     include: {

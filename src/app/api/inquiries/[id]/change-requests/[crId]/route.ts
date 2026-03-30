@@ -13,7 +13,7 @@ export async function PATCH(
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = (session.user as any).role as UserRole;
-  if (!hasPermission(role, "manage:orders")) {
+  if (!hasPermission(role, "edit:order")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -56,7 +56,7 @@ export async function PATCH(
     for (const item of items) {
       if (item.quantity) {
         await prisma.orderLine.updateMany({
-          where: { orderId: cr.orderId, styleName: { contains: item.itemName, mode: "insensitive" } },
+          where: { orderId: cr.orderId, styleName: { contains: item.itemName } },
           data: { quantity: parseInt(item.quantity) },
         });
       }

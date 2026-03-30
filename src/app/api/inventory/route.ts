@@ -20,8 +20,8 @@ export async function GET(request: Request) {
     isActive: true,
     ...(search ? {
       OR: [
-        { name: { contains: search, mode: "insensitive" } },
-        { code: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
+        { code: { contains: search } },
       ],
     } : {}),
     ...(category ? { category } : {}),

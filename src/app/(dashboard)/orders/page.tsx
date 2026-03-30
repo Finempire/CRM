@@ -37,8 +37,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     ...(sp.buyerId && { buyerId: sp.buyerId }),
     ...(sp.search && {
       OR: [
-        { orderNumber: { contains: sp.search, mode: "insensitive" } },
-        { buyer: { name: { contains: sp.search, mode: "insensitive" } } },
+        { orderNumber: { contains: sp.search } },
+        { buyer: { name: { contains: sp.search } } },
       ],
     }),
     // Restrict CLIENT users to their own orders only

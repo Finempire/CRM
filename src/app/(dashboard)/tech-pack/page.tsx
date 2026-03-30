@@ -25,8 +25,8 @@ export default async function TechPackPage({ searchParams }: { searchParams: Pro
     ...(sp.status ? { approvalStatus: sp.status } : {}),
     ...(sp.search ? {
       OR: [
-        { title: { contains: sp.search, mode: "insensitive" } },
-        { order: { orderNumber: { contains: sp.search, mode: "insensitive" } } },
+        { title: { contains: sp.search } },
+        { order: { orderNumber: { contains: sp.search } } },
       ],
     } : {}),
     ...(role === "MERCHANDISER" ? { order: { merchandiserId: session.user.id } } : {}),

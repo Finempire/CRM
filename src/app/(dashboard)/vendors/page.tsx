@@ -41,9 +41,9 @@ export default async function VendorsPage({ searchParams }: { searchParams: Prom
     ...(sp.type ? { type: sp.type } : {}),
     ...(sp.search ? {
       OR: [
-        { name: { contains: sp.search, mode: "insensitive" } },
-        { code: { contains: sp.search, mode: "insensitive" } },
-        { email: { contains: sp.search, mode: "insensitive" } },
+        { name: { contains: sp.search } },
+        { code: { contains: sp.search } },
+        { email: { contains: sp.search } },
       ],
     } : {}),
   };

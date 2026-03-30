@@ -63,8 +63,8 @@ export async function POST(
     const firstItemName = validItems[0].itemName;
     const existingInquiry = await prisma.inquiry.findFirst({
       where: {
-        buyerName: { equals: buyerName, mode: "insensitive" },
-        items: { some: { itemName: { contains: firstItemName.substring(0, 20), mode: "insensitive" } } },
+        buyerName: { equals: buyerName },
+        items: { some: { itemName: { contains: firstItemName.substring(0, 20) } } },
         shipmentDate: shipmentDate
           ? {
               gte: new Date(new Date(shipmentDate).getTime() - 7 * 24 * 60 * 60 * 1000),

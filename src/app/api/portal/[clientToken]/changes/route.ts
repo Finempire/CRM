@@ -49,7 +49,7 @@ export async function POST(
   // Notify accountant, admin, and merchandiser immediately
   await broadcastNotification({
     roles: ["SUPER_ADMIN", "ACCOUNTANT_ADMIN", "ACCOUNTANT", "ADMIN_OPERATIONS", "MERCHANDISER"],
-    type: "ORDER_UPDATE",
+    type: "INQUIRY_RECEIVED",
     priority: "HIGH",
     title: `Change Request: ${inquiry.inquiryNumber}`,
     message: `${inquiry.buyerName} requested changes — "${message.trim().substring(0, 80)}"`,

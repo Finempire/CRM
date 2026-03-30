@@ -20,7 +20,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const stockItems = await prisma.stockItem.findMany({
     where: {
       AND: [
-        query ? { OR: [{ name: { contains: query, mode: "insensitive" } }, { code: { contains: query, mode: "insensitive" } }] } : {},
+        query ? { OR: [{ name: { contains: query } }, { code: { contains: query } }] } : {},
         category ? { category } : {},
       ]
     },
