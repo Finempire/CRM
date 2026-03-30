@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     buyerId, type, shipmentDate, paymentTerms, taxMode, currency,
     merchandiserId, productionManagerId, notes, inquiryId,
     styleName, quantity, color, unit,
+    orderLines, // array from multi-item inquiry conversion
   } = body;
 
   if (!buyerId || !styleName || !quantity) {
@@ -23,6 +24,17 @@ export async function POST(request: Request) {
   }
 
   const orderNumber = generateOrderNumber("ORD");
+
+  // Build order lines: use provided array (multi-item) or fall back to single line
+  const lines =
+    Array.isArray(orderLines) && orderLines.length > 0
+      ? orderLines.map((l: any) => ({
+          styleName: l.styleName,
+          description: l.description ?? null,
+          quantity: parseInt(l.quantity, 10) || 1,
+          unit: l.unit ?? "PCS",
+        }))
+      : [{ styleName, quantity: parseInt(quantity, 10), color: color || null, unit: unit ?? "PCS" }];
 
   const order = await prisma.order.create({
     data: {
@@ -40,12 +52,7 @@ export async function POST(request: Request) {
       notes: notes || null,
       inquiryId: inquiryId || null,
       orderLines: {
-        create: {
-          styleName,
-          quantity: parseInt(quantity, 10),
-          color: color || null,
-          unit: unit ?? "PCS",
-        },
+        create: lines,
       },
       statusHistory: {
         create: {

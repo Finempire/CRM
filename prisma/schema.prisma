@@ -355,12 +355,28 @@ model Inquiry {
   buyer           Buyer?        @relation(fields: [buyerId], references: [id])
   createdBy       User?         @relation("InquiryCreatedBy", fields: [createdById], references: [id])
   attachments     InquiryAttachment[]
+  items           InquiryItem[]
   order           Order?        @relation(fields: [convertedOrderId], references: [id])
 
   @@index([status])
   @@index([buyerName])
   @@index([shipmentDate])
   @@map("inquiries")
+}
+
+model InquiryItem {
+  id               String  @id @default(cuid())
+  inquiryId        String
+  itemName         String
+  styleDescription String?
+  quantity         Int?
+  fabricNotes      String?
+  trimsNotes       String?
+  printingNotes    String?
+
+  inquiry          Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@map("inquiry_items")
 }
 
 model InquiryAttachment {

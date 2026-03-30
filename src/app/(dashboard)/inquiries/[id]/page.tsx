@@ -24,6 +24,7 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
     include: {
       buyer: true,
       attachments: true,
+      items: { orderBy: { id: "asc" } },
       createdBy: { select: { name: true, email: true } },
       order: { select: { id: true, orderNumber: true, status: true } },
     },
@@ -152,41 +153,96 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          {/* Item Details */}
+          {/* Items / Styles */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <h2 className="font-semibold text-base">Item Details</h2>
-            <div className="space-y-3 text-sm">
-              {inquiry.itemDetails && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Style / Item Description</p>
-                  <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.itemDetails}</p>
-                </div>
-              )}
-              {inquiry.fabricNotes && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Fabric Notes</p>
-                  <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.fabricNotes}</p>
-                </div>
-              )}
-              {inquiry.trimsNotes && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Trims / Labels Notes</p>
-                  <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.trimsNotes}</p>
-                </div>
-              )}
-              {inquiry.printingNotes && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Printing / Embroidery Notes</p>
-                  <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.printingNotes}</p>
-                </div>
-              )}
-              {inquiry.otherComments && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Other Comments</p>
-                  <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.otherComments}</p>
-                </div>
-              )}
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-base">Items / Styles</h2>
+              <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded-full">
+                {inquiry.items.length} item{inquiry.items.length !== 1 ? "s" : ""}
+                {inquiry.quantity ? ` · ${inquiry.quantity.toLocaleString()} pcs total` : ""}
+              </span>
             </div>
+
+            {inquiry.items.length > 0 ? (
+              <div className="space-y-4">
+                {inquiry.items.map((item, idx) => (
+                  <div key={item.id} className="border border-border rounded-xl p-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-primary-foreground">{idx + 1}</span>
+                      </div>
+                      <p className="font-medium text-sm">{item.itemName}</p>
+                      {item.quantity && (
+                        <span className="ml-auto text-xs font-medium bg-background border border-border px-2 py-0.5 rounded-full">
+                          {item.quantity.toLocaleString()} pcs
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {item.styleDescription && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Style Description</p>
+                          <p className="bg-background rounded-lg px-3 py-2 border border-border/50">{item.styleDescription}</p>
+                        </div>
+                      )}
+                      {item.fabricNotes && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Fabric Notes</p>
+                          <p className="bg-background rounded-lg px-3 py-2 border border-border/50">{item.fabricNotes}</p>
+                        </div>
+                      )}
+                      {item.trimsNotes && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Trims & Labels</p>
+                          <p className="bg-background rounded-lg px-3 py-2 border border-border/50">{item.trimsNotes}</p>
+                        </div>
+                      )}
+                      {item.printingNotes && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Printing / Embroidery</p>
+                          <p className="bg-background rounded-lg px-3 py-2 border border-border/50">{item.printingNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Legacy single-item fallback */
+              <div className="space-y-3 text-sm">
+                {inquiry.itemDetails && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Style / Item Description</p>
+                    <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.itemDetails}</p>
+                  </div>
+                )}
+                {inquiry.fabricNotes && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Fabric Notes</p>
+                    <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.fabricNotes}</p>
+                  </div>
+                )}
+                {inquiry.trimsNotes && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Trims / Labels Notes</p>
+                    <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.trimsNotes}</p>
+                  </div>
+                )}
+                {inquiry.printingNotes && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Printing / Embroidery</p>
+                    <p className="bg-muted/30 rounded-lg px-3 py-2">{inquiry.printingNotes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {inquiry.otherComments && (
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-1">Other Comments</p>
+                <p className="bg-muted/30 rounded-lg px-3 py-2 text-sm">{inquiry.otherComments}</p>
+              </div>
+            )}
           </div>
 
           {/* Attachments */}
@@ -245,7 +301,18 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
 
           {/* Actions for convert/reject */}
           {canConvert && inquiry.status !== "CONVERTED" && inquiry.status !== "REJECTED" && (
-            <InquiryActions inquiryId={inquiry.id} buyers={buyers} inquiry={inquiry as any} />
+            <InquiryActions
+              inquiryId={inquiry.id}
+              buyers={buyers}
+              inquiry={{
+                id: inquiry.id,
+                buyerName: inquiry.buyerName,
+                shipmentDate: inquiry.shipmentDate,
+                quantity: inquiry.quantity,
+                itemDetails: inquiry.itemDetails,
+                items: inquiry.items,
+              }}
+            />
           )}
         </div>
       </div>
