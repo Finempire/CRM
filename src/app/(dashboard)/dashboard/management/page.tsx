@@ -60,14 +60,14 @@ export default async function ManagementDashboard() {
     prisma.shipment.count({
       where: { status: "DELIVERED", actualDeliveryDate: { gte: thirtyDaysAgo } },
     }),
-    // Revenue by month (last 6)
+    // Revenue by month (last 6) - MySQL syntax
     prisma.$queryRaw<{ month: string; revenue: number }[]>`
-      SELECT TO_CHAR(created_at, 'Mon YYYY') as month, 
-             COALESCE(SUM(total_revenue), 0)::float as revenue
+      SELECT DATE_FORMAT(createdAt, '%b %Y') as month,
+             CAST(COALESCE(SUM(totalRevenue), 0) AS DECIMAL(15,2)) as revenue
       FROM costings
-      WHERE created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY TO_CHAR(created_at, 'Mon YYYY')
-      ORDER BY MIN(created_at)
+      WHERE createdAt >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      GROUP BY DATE_FORMAT(createdAt, '%b %Y')
+      ORDER BY MIN(createdAt)
     `.catch(() => [] as { month: string; revenue: number }[]),
     // Delayed orders
     prisma.order.count({
